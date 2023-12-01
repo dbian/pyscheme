@@ -1,5 +1,5 @@
 import unittest
-import scheme
+import pyscheme.scheme as scheme
 
 
 class TestT(unittest.TestCase):
