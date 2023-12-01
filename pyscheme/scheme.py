@@ -33,8 +33,9 @@ def eval_sexpression(expr, env):
         case expr if isinstance(expr, str):
             if expr in env:
                 return env[expr]
-            else:
-                raise NameError("Undefined symbol: " + expr)
+            if expr.startswith('"') and expr.endswith('"'):
+                return expr[1:-1]
+            raise NameError("Undefined symbol: " + expr)
 
         case expr if not isinstance(expr, list):
             return expr
@@ -136,6 +137,9 @@ def display(x):
 
 install_func("square", square)
 install_func("display", display)
+
+# python bridge
+install_func("attr", getattr)
 
 if __name__ == "__main__":
     # 启动交互式命令行界面
