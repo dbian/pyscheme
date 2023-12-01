@@ -22,6 +22,8 @@ global_env = {
     "list?": lambda x: isinstance(x, list),
     "symbol?": lambda x: isinstance(x, str),
     "number?": lambda x: isinstance(x, (int, float)),
+    "car": lambda x: x[0] if x else None,
+    "cdr": lambda x: x[1:] if x else None,
 }
 
 
