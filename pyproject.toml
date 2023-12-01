@@ -2,7 +2,7 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 [project]
-name = "py_scheme"
+name = "pyscheme"
 version = "0.0.1"
 description = "Minimal r7rs scheme python library with a repl. Made by gpt, tuned by a human."
 readme = "README.md"
