@@ -30,5 +30,13 @@ class TestT(unittest.TestCase):
         self.assertEqual(scheme.run("(list 1 2 3)", env), [1, 2, 3])
         self.assertEqual(scheme.run('(list "abc你好世界")', env), ["abc你好世界"])
 
+    def test_let(self):
+        env = scheme.new_env()
+        self.assertEqual(scheme.run("(let ((a 1) (b 2)) (+ a b))", env), 3)
+
+    def test_let_lexical_scope(self):
+        env = scheme.new_env()
+        self.assertEqual(scheme.run("(let ((a 1)) (+ a (let ((a 2)) a)))", env), 3)
+
 
 unittest.main()

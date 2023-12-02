@@ -68,7 +68,17 @@ def eval_sexpression(expr, env):
 
         case ["lambda", params, body]:
             return lambda *args: eval_sexpression(body, env | dict(zip(params, args)))
-
+        case ["begin", *exps]:
+            for exp in exps:
+                result = eval_sexpression(exp, env)
+            return result
+        case ["let", bindings, *body]:
+            new_env = env.copy()
+            for binding in bindings:
+                symbol, exp = binding
+                value = eval_sexpression(exp, env)
+                new_env[symbol] = value
+            return eval_sexpression(["begin", *body], new_env)
         case [proc, *args]:
             proc = eval_sexpression(proc, env)
             args = [eval_sexpression(arg, env) for arg in args]
@@ -133,12 +143,15 @@ def new_env():
 
 
 # 创建交互式命令行界面
-def repl():
-    env_new = global_env.copy()
+def repl(env=None):
+    env_new = env or global_env.copy()
     while True:
         try:
             code = input("Scheme> ")
             res = run(code, env_new)
+            env_new["*3"] = env_new["*2"] if "*2" in env_new else None
+            env_new["*2"] = env_new["*1"] if "*1" in env_new else None
+            env_new["*1"] = res
             if res is not None:
                 print(res)
         except (EOFError, KeyboardInterrupt):
@@ -148,16 +161,10 @@ def repl():
             print("Error:", str(e))
 
 
-# 安装自定义函数示例
-def square(x):
-    return x * x
-
-
 def display(x):
     print(x)
 
 
-install_func("square", square)
 install_func("display", display)
 
 # python bridge

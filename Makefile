@@ -1,3 +1,3 @@
 deploy:
-	py -m build --wheel
-	twine upload dist/*
+	.env\Scripts\python.exe -m build --wheel
+	.env\Scripts\python.exe -m twine upload .\dist\*
