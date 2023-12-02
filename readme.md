@@ -22,6 +22,8 @@ pip install git+https://github.com/dbian/pyscheme.git
 - `begin`, `if`, `lambda`, `define`... etc.
 - REPL, with clojure like `*1` `*2` `*3` result cache support
 - install_func to extend scheme language, you can use it to install global variables too.
+- single line comment, start with `;`
+- more
 
 # Usage
 
@@ -40,8 +42,9 @@ sc.install_func("format", str_format_func)
 # Todo
 
 - macros system
-- whitespace handling
+- better token parsing
+  - string support whitespace `(` `)`
+  - quote `'` support
 - clojure pipeline operator support
-- quote `'` support
 - module system
 - more

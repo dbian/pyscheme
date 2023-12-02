@@ -95,7 +95,13 @@ def install_func(name, func):
 
 # 运行字符串源码
 def run(code: str, env: dict):
-    tokens = code.replace("(", " ( ").replace(")", " ) ").split()
+    lines = code.split("\n")
+    tokens = []
+    for line in lines:
+        # 移除行注释
+        line = line.split(";")[0]
+        tokens.extend(line.replace("(", " ( ").replace(")", " ) ").split())
+
     while len(tokens) > 0:
         exprs = parse(tokens)
         res = eval_sexpression(exprs, env)

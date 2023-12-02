@@ -38,5 +38,9 @@ class TestT(unittest.TestCase):
         env = scheme.new_env()
         self.assertEqual(scheme.run("(let ((a 1)) (+ a (let ((a 2)) a)))", env), 3)
 
+    def test_simple_comment(self):
+        env = scheme.new_env()
+        self.assertEqual(scheme.run("(+ 1 34) ; wdq dq", env), 35)
+
 
 unittest.main()
