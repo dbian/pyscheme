@@ -2,6 +2,11 @@ import operator
 import math
 from typing import List
 
+
+def list_func(*x):
+    return list(x)
+
+
 # 定义全局环境
 global_env = {
     "+": operator.add,
@@ -24,6 +29,9 @@ global_env = {
     "number?": lambda x: isinstance(x, (int, float)),
     "car": lambda x: x[0] if x else None,
     "cdr": lambda x: x[1:] if x else None,
+    "list": list_func,
+    "list-tail": lambda lst, k: lst[k:] if isinstance(lst, list) else None,
+    "map": lambda x, y: list(map(x, y)),
 }
 
 
@@ -39,7 +47,15 @@ def eval_sexpression(expr, env):
 
         case expr if not isinstance(expr, list):
             return expr
-
+        case ["cond", *clauses]:
+            for clause in clauses:
+                if eval_sexpression(clause[0], env):
+                    return eval_sexpression(clause[1], env)
+            return None
+        case ["list-tail", lst, k]:
+            lst = eval_sexpression(lst, env)
+            k = eval_sexpression(k, env)
+            return lst[k:]
         case ["quote", exp]:
             return exp
 
@@ -51,7 +67,7 @@ def eval_sexpression(expr, env):
             env[symbol] = eval_sexpression(exp, env)
 
         case ["lambda", params, body]:
-            return lambda *args: eval_sexpression(body, dict(zip(params, args)))
+            return lambda *args: eval_sexpression(body, env | dict(zip(params, args)))
 
         case [proc, *args]:
             proc = eval_sexpression(proc, env)
@@ -68,20 +84,19 @@ def install_func(name, func):
 
 
 # 运行字符串源码
-def run(code: str):
+def run(code: str, env: dict):
     tokens = code.replace("(", " ( ").replace(")", " ) ").split()
-    env_new = global_env.copy()
     while len(tokens) > 0:
         exprs = parse(tokens)
-        res = eval_sexpression(exprs, env_new)
+        res = eval_sexpression(exprs, env)
     return res
 
 
 # 运行文件
-def run_file(filename):
-    with open(filename, "r") as file:
+def run_file(filename, env):
+    with open(filename, "r", encoding="utf-8") as file:
         code = file.read()
-        run(code)
+        run(code, env)
 
 
 # 解析
@@ -113,12 +128,19 @@ def atomize(token):
             return token
 
 
+def new_env():
+    return global_env.copy()
+
+
 # 创建交互式命令行界面
 def repl():
+    env_new = global_env.copy()
     while True:
         try:
             code = input("Scheme> ")
-            run(code)
+            res = run(code, env_new)
+            if res is not None:
+                print(res)
         except (EOFError, KeyboardInterrupt):
             print("\nGoodbye!")
             break
