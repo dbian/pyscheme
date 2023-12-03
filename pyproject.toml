@@ -3,8 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 [project]
 name = "pyscheme"
-version = "0.0.1"
+version = "0.0.3"
 description = "Minimal r7rs scheme python library with a repl. Made by gpt, maintained by a human."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+[project.urls]
+Homepage = "https://github.com/dbian/pyscheme"
+Documentation = "https://github.com/dbian/pyscheme"
+Repository = "https://github.com/dbian/pyscheme"
+Issues = "https://github.com/dbian/pyscheme/issues"
