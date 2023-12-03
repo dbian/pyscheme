@@ -1,6 +1,6 @@
 deploy:
-	.env\Scripts\python.exe -m build --wheel
-	.env\Scripts\python.exe -m twine upload .\dist\*
+	python -m build --wheel
+	python -m twine upload ./dist/*
 
 t:
 	python -m unittest
