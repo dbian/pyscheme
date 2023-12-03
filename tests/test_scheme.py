@@ -1,9 +1,5 @@
-import unittest
-import sys
-
-sys.path.append("..")
-print(sys.path)
 from pyscheme import scheme
+import unittest
 
 
 class TestT(unittest.TestCase):
@@ -36,11 +32,14 @@ class TestT(unittest.TestCase):
 
     def test_let_lexical_scope(self):
         env = scheme.new_env()
-        self.assertEqual(scheme.run("(let ((a 1)) (+ a (let ((a 2)) a)))", env), 3)
+        self.assertEqual(scheme.run(
+            "(let ((a 1)) (+ a (let ((a 2)) a)))", env), 3)
 
     def test_simple_comment(self):
         env = scheme.new_env()
-        self.assertEqual(scheme.run("(+ 1 34) ; wdq dq", env), 35)
+        self.assertEqual(scheme.run("(+ 1 314) ; wdq \"dq", env), 315)
+        self.assertEqual(scheme.run("(+ 1 314) ; wdq \"dq\n; aaa", env), 315)
 
 
-unittest.main()
+if __name__ == '__main__':
+    unittest.main()

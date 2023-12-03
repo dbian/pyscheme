@@ -1,11 +1,7 @@
 import operator
 import math
-from typing import List
-
-
-def list_func(*x):
-    return list(x)
-
+from typing import List, Tuple
+from . import tokenizer
 
 # 定义全局环境
 global_env = {
@@ -29,7 +25,7 @@ global_env = {
     "number?": lambda x: isinstance(x, (int, float)),
     "car": lambda x: x[0] if x else None,
     "cdr": lambda x: x[1:] if x else None,
-    "list": list_func,
+    "list": lambda *x: list(x),
     "list-tail": lambda lst, k: lst[k:] if isinstance(lst, list) else None,
     "map": lambda x, y: list(map(x, y)),
 }
@@ -69,6 +65,7 @@ def eval_sexpression(expr, env):
         case ["lambda", params, body]:
             return lambda *args: eval_sexpression(body, env | dict(zip(params, args)))
         case ["begin", *exps]:
+            result = None
             for exp in exps:
                 result = eval_sexpression(exp, env)
             return result
@@ -95,13 +92,10 @@ def install_func(name, func):
 
 # 运行字符串源码
 def run(code: str, env: dict):
-    lines = code.split("\n")
-    tokens = []
-    for line in lines:
-        # 移除行注释
-        line = line.split(";")[0]
-        tokens.extend(line.replace("(", " ( ").replace(")", " ) ").split())
+    tokens = tokenizer.tokenize(code)
+    tokens = list(filter(lambda x: x[0] != "COMMENT_LINE", tokens))
 
+    res = None
     while len(tokens) > 0:
         exprs = parse(tokens)
         res = eval_sexpression(exprs, env)
@@ -116,14 +110,14 @@ def run_file(filename, env):
 
 
 # 解析
-def parse(tokens: List[str]):
+def parse(tokens: List[Tuple[str, str]]):
     if len(tokens) == 0:
         raise SyntaxError("Unexpected EOF")
 
-    token = tokens.pop(0)
+    _, token = tokens.pop(0)
     if token == "(":
         expr = []
-        while tokens[0] != ")":
+        while tokens[0][1] != ")":
             expr.append(parse(tokens))
         tokens.pop(0)  # 弹出')'
         return expr
