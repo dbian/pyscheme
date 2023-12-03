@@ -18,7 +18,7 @@ pip install git+https://github.com/dbian/pyscheme.git
 
 # Implemented Features
 
-- lexical scope `let`
+- lexical scope `let`,`let*`
 - `begin`, `if`, `lambda`, `define`... etc.
 - REPL, with clojure like `*1` `*2` `*3` result cache support
 - install_func to extend scheme language, you can use it to install global variables too.
@@ -42,9 +42,7 @@ sc.install_func("format", str_format_func)
 # Todo
 
 - macros system
-- better token parsing
-  - string support whitespace `(` `)`
-  - quote `'` support
+- quote `'` support
 - clojure pipeline operator support
 - module system
 - more

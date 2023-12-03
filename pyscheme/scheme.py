@@ -76,6 +76,13 @@ def eval_sexpression(expr, env):
                 value = eval_sexpression(exp, env)
                 new_env[symbol] = value
             return eval_sexpression(["begin", *body], new_env)
+        case ["let*", bindings, *body]:
+            new_env = env.copy()
+            for binding in bindings:
+                symbol, exp = binding
+                value = eval_sexpression(exp, new_env)  # 使用new_env来求值
+                new_env[symbol] = value
+            return eval_sexpression(["begin", *body], new_env)
         case [proc, *args]:
             proc = eval_sexpression(proc, env)
             args = [eval_sexpression(arg, env) for arg in args]
