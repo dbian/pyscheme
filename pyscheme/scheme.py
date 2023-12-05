@@ -93,24 +93,34 @@ def eval_sexpression(expr, env):
 
 
 # 安装函数到解释器环境
-def install_func(name, func):
+def put(name, func, env=None):
+    if env:
+        env[name] = func
+        return
     global global_env
     global_env[name] = func
 
 
-# 运行字符串源码
-def run(code: str, env: dict):
+def run_yield(code: str, env: dict):
     tokens = tokenizer.tokenize(code)
     tokens = list(filter(lambda x: x[0] != "COMMENT_LINE", tokens))
 
-    res = None
     while len(tokens) > 0:
         exprs = parse(tokens)
-        res = eval_sexpression(exprs, env)
+        yield eval_sexpression(exprs, env)
+
+# 运行字符串源码
+
+
+def run(code: str, env: dict):
+    res = None
+    for x in run_yield(code, env):
+        res = x
     return res
 
-
 # 运行文件
+
+
 def run_file(filename, env):
     with open(filename, "r", encoding="utf-8") as file:
         code = file.read()
@@ -173,10 +183,10 @@ def display(x):
     print(x)
 
 
-install_func("display", display)
+put("display", display)
 
 # python bridge
-install_func("attr", getattr)
+put("attr", getattr)
 
 if __name__ == "__main__":
     # 启动交互式命令行界面
