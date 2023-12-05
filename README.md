@@ -43,6 +43,5 @@ sc.install_func("format", str_format_func)
 
 - macros system
 - quote `'` support
-- clojure pipeline operator support
 - module system
 - more

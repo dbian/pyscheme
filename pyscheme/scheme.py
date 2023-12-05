@@ -58,10 +58,11 @@ def eval_sexpression(expr, env):
         case ["if", test, conseq, alt]:
             exp = conseq if eval_sexpression(test, env) else alt
             return eval_sexpression(exp, env)
-
+        case ["define", [func_name, *params], body]:
+            env[func_name] = lambda *args: eval_sexpression(
+                body, env | dict(zip(params, args)))
         case ["define", symbol, exp]:
             env[symbol] = eval_sexpression(exp, env)
-
         case ["lambda", params, body]:
             return lambda *args: eval_sexpression(body, env | dict(zip(params, args)))
         case ["begin", *exps]:

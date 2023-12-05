@@ -47,6 +47,12 @@ class TestT(unittest.TestCase):
         self.assertEqual(scheme.run("(+ 1 314) ; wdq \"dq", env), 315)
         self.assertEqual(scheme.run("(+ 1 314) ; wdq \"dq\n; aaa", env), 315)
 
+    def test_define_func(self):
+        env = scheme.new_env()
+        self.assertEqual(
+            scheme.run("(define (bb aa) (+ aa 2)) (bb 2)", env), 4
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
