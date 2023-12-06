@@ -1,3 +1,4 @@
+import time
 from pyscheme import scheme
 import unittest
 
@@ -52,6 +53,37 @@ class TestT(unittest.TestCase):
         self.assertEqual(
             scheme.run("(define (bb aa) (+ aa 2)) (bb 2)", env), 4
         )
+
+
+def yd(x):
+    yield x
+
+
+class TestYield(unittest.TestCase):
+    def test_yield(self):
+        env = scheme.new_env()
+        scheme.put("yd", yd, env)
+        scheme.put("sleep", lambda x: time.sleep(x), env)
+        f = scheme.run_file_yield("tests/y1.scm", env)
+        v = next(f)
+        self.assertEqual(v, 1)
+        print(v)
+        self.assertEqual(next(f), None)
+        self.assertEqual(next(f), 4)
+        self.assertEqual(next(f), 2)
+
+    def test_loadfile(self):
+        env = scheme.new_env()
+        scheme.put("yd", yd, env)
+        scheme.put("sleep", lambda x: time.sleep(x), env)
+        scheme.put("load", lambda x: scheme.run_file_yield(x, env), env)
+        f = scheme.run_yield("(load \"tests/y1.scm\")", env)
+        v = next(f)
+        self.assertEqual(v, 1)
+        print(v)
+        self.assertEqual(next(f), None)
+        self.assertEqual(next(f), 4)
+        self.assertEqual(next(f), 2)
 
 
 if __name__ == '__main__':

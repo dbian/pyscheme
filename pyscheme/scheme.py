@@ -1,6 +1,6 @@
 import operator
 import math
-from typing import List, Tuple
+from typing import Generator, List, Tuple
 from . import tokenizer
 
 # 定义全局环境
@@ -26,7 +26,6 @@ global_env = {
     "car": lambda x: x[0] if x else None,
     "cdr": lambda x: x[1:] if x else None,
     "list": lambda *x: list(x),
-    "list-tail": lambda lst, k: lst[k:] if isinstance(lst, list) else None,
     "map": lambda x, y: list(map(x, y)),
 }
 
@@ -101,13 +100,17 @@ def put(name, func, env=None):
     global_env[name] = func
 
 
-def run_yield(code: str, env: dict):
+def run_yield(code: str, env: dict) -> Generator:
     tokens = tokenizer.tokenize(code)
     tokens = list(filter(lambda x: x[0] != "COMMENT_LINE", tokens))
 
     while len(tokens) > 0:
         exprs = parse(tokens)
-        yield eval_sexpression(exprs, env)
+        res = eval_sexpression(exprs, env)
+        if isinstance(res, Generator):
+            yield from res
+        else:
+            yield res
 
 # 运行字符串源码
 
@@ -127,7 +130,15 @@ def run_file(filename, env):
         run(code, env)
 
 
+def run_file_yield(filename, env) -> Generator:
+    with open(filename, "r", encoding="utf-8") as file:
+        code = file.read()
+        yield from run_yield(
+            code, env)
+
 # 解析
+
+
 def parse(tokens: List[Tuple[str, str]]):
     if len(tokens) == 0:
         raise SyntaxError("Unexpected EOF")
