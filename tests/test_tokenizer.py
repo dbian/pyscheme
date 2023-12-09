@@ -48,6 +48,13 @@ class TestT(unittest.TestCase):
         tk = tokenizer.tokenize(scheme_code)
         self.assertEqual(tk[0], (tokenizer.TokenType.WORD, "+"))
 
+    def test_double_quote(self):
+        scheme_code = "''a"
+        tk = tokenizer.tokenize(scheme_code)
+        self.assertEqual(tk[0], (tokenizer.TokenType.QUOTE, "'"))
+        self.assertEqual(tk[1], (tokenizer.TokenType.QUOTE, "'"))
+        self.assertEqual(tk[2], (tokenizer.TokenType.WORD, "a"))
+
 
 if __name__ == '__main__':
     unittest.main()

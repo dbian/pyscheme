@@ -1,5 +1,6 @@
 import operator
 import math
+from pyscheme.parser import parse
 from pyscheme.tokenizer import *
 from typing import Dict, Generator, List, Tuple
 from . import tokenizer
@@ -208,27 +209,6 @@ def run_file_yield(filename, env) -> Generator:
         code = file.read()
         yield from run_yield(
             code, env)
-
-# 解析
-
-
-def parse(tokens: List) -> List[Token] | Token:
-    if len(tokens) == 0:
-        raise SyntaxError("Unexpected EOF")
-
-    v = tokens.pop(0)
-    _, token = v
-    match token:
-        case "(":
-            expr = []
-            while tokens[0][1] != ")":
-                expr.append(parse(tokens))
-            tokens.pop(0)  # 弹出')'
-            return expr
-        case ")":
-            raise SyntaxError("Unexpected )")
-        case _:
-            return v
 
 
 def new_env():
