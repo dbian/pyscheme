@@ -36,6 +36,18 @@ class TestT(unittest.TestCase):
         self.assertEqual(tk[3], (tokenizer.TokenType.NUMBER, 30))
         self.assertEqual(tk[4], (tokenizer.TokenType.PAREN_R, ")"))
 
+    @unittest.skip("not implemented yet")
+    def test_wrong(self):
+        scheme_code = '"aa'
+        tk = tokenizer.tokenize(scheme_code)
+        print(tk)
+        self.assertEqual(len(tk), 0)
+
+    def test_oper(self):
+        scheme_code = '+'
+        tk = tokenizer.tokenize(scheme_code)
+        self.assertEqual(tk[0], (tokenizer.TokenType.WORD, "+"))
+
 
 if __name__ == '__main__':
     unittest.main()

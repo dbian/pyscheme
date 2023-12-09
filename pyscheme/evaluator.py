@@ -1,7 +1,42 @@
 import operator
 import math
-from typing import Generator, List, Tuple
+from pyscheme.tokenizer import *
+from typing import Dict, Generator, List, Tuple
 from . import tokenizer
+
+
+def define_syntax(args):
+    syntax_name, transformer = args
+    return ["define-syntax", syntax_name, transformer]
+
+
+def syntax_rules(args):
+    syntax_name, *rules = args
+    return ["define-syntax", syntax_name, lambda args: expand_syntax_rules(args, rules)]
+
+
+def expand_syntax_rules(args, rules):
+    for pattern, template in rules:
+        if match_pattern(args, pattern):
+            return expand_template(args, template)
+    raise SyntaxError("No matching syntax rule")
+
+
+def match_pattern(args, pattern):
+    if isinstance(pattern, str):
+        return pattern == "_" or pattern == args
+    if len(args) != len(pattern):
+        return False
+    return all(match_pattern(arg, pat) for arg, pat in zip(args, pattern))
+
+
+def expand_template(args, template):
+    if isinstance(template, str):
+        return template
+    if isinstance(template, list):
+        return [expand_template(arg, template) for arg in args]
+    return template
+
 
 # 定义全局环境
 global_env = {
@@ -27,21 +62,32 @@ global_env = {
     "cdr": lambda x: x[1:] if x else None,
     "list": lambda *x: list(x),
     "map": lambda x, y: list(map(x, y)),
+    "define-syntax": define_syntax,
+    "syntax-rules": syntax_rules
 }
 
 
-# 定义解释器的函数
-def eval_sexpression(expr, env):
-    match expr:
-        case expr if isinstance(expr, str):
-            if expr in env:
-                return env[expr]
-            if expr.startswith('"') and expr.endswith('"'):
-                return expr[1:-1]
-            raise NameError("Undefined symbol: " + expr)
+def get_list_val(lst):
+    return [x[1] for x in lst]
 
-        case expr if not isinstance(expr, list):
-            return expr
+# 定义解释器的函数
+
+
+def eval_sexpression(expr: List | Token, env: Dict):
+    # expr = macro_expand(expr, env)  # Macro expansion
+    if not isinstance(expr, list):
+        # print('eval sg', expr)
+        kind, val = expr
+        match kind:
+            case TokenType.STRING | TokenType.NUMBER:
+                return val
+            case TokenType.WORD:
+                if val not in env:
+                    raise NameError("Undefined symbol: " + val)  # type: ignore
+                return env[val]
+            case _:
+                raise SyntaxError(f"Invalid syntax: {expr}")
+    match [expr[0][1], *expr[1:]]:
         case ["cond", *clauses]:
             for clause in clauses:
                 if eval_sexpression(clause[0], env):
@@ -57,13 +103,13 @@ def eval_sexpression(expr, env):
         case ["if", test, conseq, alt]:
             exp = conseq if eval_sexpression(test, env) else alt
             return eval_sexpression(exp, env)
-        case ["define", [func_name, *params], body]:
+        case ["define", [(TokenType.WORD, func_name), *params], body]:
             env[func_name] = lambda *args: eval_sexpression(
-                body, env | dict(zip(params, args)))
+                body, env | dict(zip(get_list_val(params), args)))
         case ["define", symbol, exp]:
-            env[symbol] = eval_sexpression(exp, env)
+            env[symbol[1]] = eval_sexpression(exp, env)
         case ["lambda", params, body]:
-            return lambda *args: eval_sexpression(body, env | dict(zip(params, args)))
+            return lambda *args: eval_sexpression(body, env | dict(zip(get_list_val(params), args)))
         case ["begin", *exps]:
             result = None
             for exp in exps:
@@ -74,24 +120,52 @@ def eval_sexpression(expr, env):
             for binding in bindings:
                 symbol, exp = binding
                 value = eval_sexpression(exp, env)
-                new_env[symbol] = value
-            return eval_sexpression(["begin", *body], new_env)
+                new_env[symbol[1]] = value
+            return eval_sexpression([(TokenType.WORD, "begin"), *body], new_env)
         case ["let*", bindings, *body]:
             new_env = env.copy()
             for binding in bindings:
                 symbol, exp = binding
                 value = eval_sexpression(exp, new_env)  # 使用new_env来求值
-                new_env[symbol] = value
-            return eval_sexpression(["begin", *body], new_env)
+                new_env[symbol[1]] = value
+            return eval_sexpression([(TokenType.WORD, "begin"), *body], new_env)
         case [proc, *args]:
-            proc = eval_sexpression(proc, env)
+            proc = eval_sexpression(expr[0], env)
             args = [eval_sexpression(arg, env) for arg in args]
             return proc(*args)
         case _:
             raise SyntaxError("Invalid syntax")
 
 
+def macro_expand(expr, env):
+    match expr:
+        case expr if isinstance(expr, str):
+            if expr in env:
+                return env[expr]
+            if expr.startswith('"') and expr.endswith('"'):
+                return expr
+            raise NameError("Undefined symbol: " + expr)
+
+        case expr if not isinstance(expr, list):
+            return expr
+
+        case ["define-syntax", syntax_name, transformer]:
+            env[syntax_name] = transformer
+
+        case [syntax_name, *args]:
+            if syntax_name in env:
+                transformer = env[syntax_name]
+                return macro_expand(transformer(args), env)
+            else:
+                raise SyntaxError("Undefined syntax: " + syntax_name)
+
+        case _:
+            raise SyntaxError("Invalid syntax")
+
+
 # 安装函数到解释器环境
+
+
 def put(name, func, env=None):
     if env:
         env[name] = func
@@ -102,7 +176,6 @@ def put(name, func, env=None):
 
 def run_yield(code: str, env: dict) -> Generator:
     tokens = tokenizer.tokenize(code)
-    tokens = list(filter(lambda x: x[0] != "COMMENT_LINE", tokens))
 
     while len(tokens) > 0:
         exprs = parse(tokens)
@@ -139,32 +212,23 @@ def run_file_yield(filename, env) -> Generator:
 # 解析
 
 
-def parse(tokens: List[Tuple[str, str]]):
+def parse(tokens: List) -> List[Token] | Token:
     if len(tokens) == 0:
         raise SyntaxError("Unexpected EOF")
 
-    _, token = tokens.pop(0)
-    if token == "(":
-        expr = []
-        while tokens[0][1] != ")":
-            expr.append(parse(tokens))
-        tokens.pop(0)  # 弹出')'
-        return expr
-    elif token == ")":
-        raise SyntaxError("Unexpected )")
-    else:
-        return atomize(token)
-
-
-# 原子化
-def atomize(token):
-    try:
-        return int(token)
-    except ValueError:
-        try:
-            return float(token)
-        except ValueError:
-            return token
+    v = tokens.pop(0)
+    _, token = v
+    match token:
+        case "(":
+            expr = []
+            while tokens[0][1] != ")":
+                expr.append(parse(tokens))
+            tokens.pop(0)  # 弹出')'
+            return expr
+        case ")":
+            raise SyntaxError("Unexpected )")
+        case _:
+            return v
 
 
 def new_env():
