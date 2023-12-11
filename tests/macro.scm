@@ -8,5 +8,5 @@
 (define x 5)
 
 (when (> x 0)  ; 当 x 大于 0 时执行
-  (newline)
+  (display x)
   1)

@@ -1,10 +1,77 @@
 import operator
 import math
-from pyscheme.macro import define_syntax, macro_expand, syntax_rules
 from pyscheme.parser import parse
 from pyscheme.tokenizer import *
 from typing import Dict, Generator, List, Tuple
 from . import tokenizer
+
+
+def define_syntax(expr, env):
+    if len(expr) != 3 or expr[1][0] != TokenType.WORD:
+        raise SyntaxError("Invalid syntax: define-syntax")
+
+    macro_name = expr[1][1]
+    transformer = eval_sexpression(expr[2], env)
+    env[macro_name] = ("macro", transformer)
+
+
+def syntax_rules(literals, pattern):
+    patterns, templates = zip(*pattern)
+    if len(patterns) != len(templates):
+        raise SyntaxError("Number of patterns must match number of templates")
+
+    def match_pattern(pattern, expr):
+        if isinstance(pattern, Tuple) and pattern[0] == TokenType.WORD and pattern[1] == "...":
+            return (pattern[1], expr)
+
+        if isinstance(pattern, Tuple) and isinstance(expr, Tuple) and len(pattern) == len(expr):
+            bindings = {}
+            for p, e in zip(pattern, expr):
+                result = match_pattern(p, e)
+                if result is None:
+                    return None
+                if isinstance(result, Tuple) and result[0] == "fail":
+                    return None
+                if isinstance(result, Tuple) and result[0] == "binding":
+                    var, val = result[1], result[2]
+                    if var in bindings and bindings[var] != val:
+                        return None
+                    bindings[var] = val
+            return ("binding", bindings)
+
+        if pattern == expr:
+            return ("success",)
+
+        return None
+
+    def apply_template(template, bindings):
+        if isinstance(template, Tuple) and template[0] == TokenType.WORD and template[1] == "...":
+            var = template[2]
+            if var in bindings:
+                return bindings[var]
+            else:
+                return ("fail",)
+
+        if isinstance(template, Tuple):
+            return tuple(apply_template(t, bindings) for t in template)
+
+        return template
+
+    def transformer(expr, env):
+        for pattern, template in zip(patterns, templates):
+            result = match_pattern(pattern, expr)
+            if result is not None:
+                if isinstance(result, Tuple) and result[0] == "binding":
+                    bindings = result[1]
+                    return apply_template(template, bindings)
+                elif isinstance(result, Tuple) and result[0] == "success":
+                    return template
+                else:
+                    raise SyntaxError("Invalid pattern template")
+        raise SyntaxError(
+            "No matching pattern found for expression: " + str(expr) + " in " + str(patterns))
+
+    return transformer
 
 
 # 定义全局环境
@@ -31,8 +98,6 @@ global_env = {
     "cdr": lambda x: x[1:] if x else None,
     "list": lambda *x: list(x),
     "map": lambda x, y: list(map(x, y)),
-    "define-syntax": define_syntax,
-    "syntax-rules": syntax_rules
 }
 
 
@@ -98,8 +163,16 @@ def eval_sexpression(expr: List | Token, env: Dict):
                 value = eval_sexpression(exp, new_env)  # 使用new_env来求值
                 new_env[symbol[1]] = value
             return eval_sexpression([(TokenType.WORD, "begin"), *body], new_env)
+        case ["define-syntax", (TokenType.WORD, macro_name), body]:
+            define_syntax(expr, env)
+        case ["syntax-rules", [*literals], *pattern]:
+            return syntax_rules(literals, pattern)
         case [proc, *args]:
             proc = eval_sexpression(expr[0], env)
+            match proc:
+                case ("macro", transformer):
+                    result_code = transformer(args, env)
+                    return eval_sexpression(result_code, env)
             args = [eval_sexpression(arg, env) for arg in args]
             return proc(*args)
         case _:
