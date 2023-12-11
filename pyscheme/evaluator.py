@@ -1,42 +1,10 @@
 import operator
 import math
+from pyscheme.macro import define_syntax, macro_expand, syntax_rules
 from pyscheme.parser import parse
 from pyscheme.tokenizer import *
 from typing import Dict, Generator, List, Tuple
 from . import tokenizer
-
-
-def define_syntax(args):
-    syntax_name, transformer = args
-    return ["define-syntax", syntax_name, transformer]
-
-
-def syntax_rules(args):
-    syntax_name, *rules = args
-    return ["define-syntax", syntax_name, lambda args: expand_syntax_rules(args, rules)]
-
-
-def expand_syntax_rules(args, rules):
-    for pattern, template in rules:
-        if match_pattern(args, pattern):
-            return expand_template(args, template)
-    raise SyntaxError("No matching syntax rule")
-
-
-def match_pattern(args, pattern):
-    if isinstance(pattern, str):
-        return pattern == "_" or pattern == args
-    if len(args) != len(pattern):
-        return False
-    return all(match_pattern(arg, pat) for arg, pat in zip(args, pattern))
-
-
-def expand_template(args, template):
-    if isinstance(template, str):
-        return template
-    if isinstance(template, list):
-        return [expand_template(arg, template) for arg in args]
-    return template
 
 
 # 定义全局环境
@@ -76,7 +44,7 @@ def get_list_val(lst):
 
 def eval_sexpression(expr: List | Token, env: Dict):
     # expr = macro_expand(expr, env)  # Macro expansion
-    if not isinstance(expr, list):
+    if isinstance(expr, Tuple):
         # print('eval sg', expr)
         kind, val = expr
         match kind:
@@ -134,32 +102,6 @@ def eval_sexpression(expr: List | Token, env: Dict):
             proc = eval_sexpression(expr[0], env)
             args = [eval_sexpression(arg, env) for arg in args]
             return proc(*args)
-        case _:
-            raise SyntaxError("Invalid syntax")
-
-
-def macro_expand(expr, env):
-    match expr:
-        case expr if isinstance(expr, str):
-            if expr in env:
-                return env[expr]
-            if expr.startswith('"') and expr.endswith('"'):
-                return expr
-            raise NameError("Undefined symbol: " + expr)
-
-        case expr if not isinstance(expr, list):
-            return expr
-
-        case ["define-syntax", syntax_name, transformer]:
-            env[syntax_name] = transformer
-
-        case [syntax_name, *args]:
-            if syntax_name in env:
-                transformer = env[syntax_name]
-                return macro_expand(transformer(args), env)
-            else:
-                raise SyntaxError("Undefined syntax: " + syntax_name)
-
         case _:
             raise SyntaxError("Invalid syntax")
 

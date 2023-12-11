@@ -7,3 +7,5 @@ t:
 
 tt:
 	python -m unittest discover -p "test_t*.py" -f
+tp:
+	python -m unittest discover -p "test_p*.py" -f --locals
