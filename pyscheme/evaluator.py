@@ -2,7 +2,7 @@ import operator
 import math
 from pyscheme.parser import parse
 from pyscheme.tokenizer import *
-from typing import Dict, Generator, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple
 from . import tokenizer
 
 
@@ -15,16 +15,16 @@ def define_syntax(expr, env):
     env[macro_name] = ("macro", transformer)
 
 
-def syntax_rules(literals, pattern):
+def syntax_rules(literals, pattern: List[Token]):
     patterns, templates = zip(*pattern)
     if len(patterns) != len(templates):
         raise SyntaxError("Number of patterns must match number of templates")
 
-    def match_pattern(pattern, expr):
+    def match_pattern(pattern: List[Token], expr: List[Any]):
         if isinstance(pattern, Tuple) and pattern[0] == TokenType.WORD and pattern[1] == "...":
             return (pattern[1], expr)
 
-        if isinstance(pattern, Tuple) and isinstance(expr, Tuple) and len(pattern) == len(expr):
+        if isinstance(pattern, List) and len(pattern) == len(expr):
             bindings = {}
             for p, e in zip(pattern, expr):
                 result = match_pattern(p, e)
@@ -39,23 +39,24 @@ def syntax_rules(literals, pattern):
                     bindings[var] = val
             return ("binding", bindings)
 
+        if isinstance(pattern, Tuple):
+            return ("binding", pattern[1], expr)
+
         if pattern == expr:
             return ("success",)
 
         return None
 
-    def apply_template(template, bindings):
-        if isinstance(template, Tuple) and template[0] == TokenType.WORD and template[1] == "...":
-            var = template[2]
-            if var in bindings:
-                return bindings[var]
-            else:
-                return ("fail",)
-
+    def apply_template(template: List | Tuple, bindings: Dict[str, Any]):
         if isinstance(template, Tuple):
-            return tuple(apply_template(t, bindings) for t in template)
-
-        return template
+            if template[0] == TokenType.WORD:
+                if template[1] in bindings:
+                    return bindings[template[1]]
+                else:
+                    return template
+            else:
+                return template
+        return [apply_template(t, bindings) for t in template]
 
     def transformer(expr, env):
         for pattern, template in zip(patterns, templates):
@@ -133,7 +134,10 @@ def eval_sexpression(expr: List | Token, env: Dict):
             return lst[k:]
         case ["quote", exp]:
             return exp
-
+        case ["if", test, conseq]:
+            if eval_sexpression(test, env):
+                return eval_sexpression(conseq, env)
+            return None
         case ["if", test, conseq, alt]:
             exp = conseq if eval_sexpression(test, env) else alt
             return eval_sexpression(exp, env)
@@ -171,7 +175,7 @@ def eval_sexpression(expr: List | Token, env: Dict):
             proc = eval_sexpression(expr[0], env)
             match proc:
                 case ("macro", transformer):
-                    result_code = transformer(args, env)
+                    result_code = transformer(expr, env)
                     return eval_sexpression(result_code, env)
             args = [eval_sexpression(arg, env) for arg in args]
             return proc(*args)
@@ -216,7 +220,7 @@ def run(code: str, env: dict):
 def run_file(filename, env):
     with open(filename, "r", encoding="utf-8") as file:
         code = file.read()
-        run(code, env)
+        return run(code, env)
 
 
 def run_file_yield(filename, env) -> Generator:
