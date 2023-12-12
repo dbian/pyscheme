@@ -21,42 +21,53 @@ def syntax_rules(literals, pattern: List[Token]):
         raise SyntaxError("Number of patterns must match number of templates")
 
     def match_pattern(pattern: List[Token], expr: List[Any]):
-        if isinstance(pattern, Tuple) and pattern[0] == TokenType.WORD and pattern[1] == "...":
-            return (pattern[1], expr)
+        def match_pattern_r(pattern: List[Token], expr: List[Any], bindings: Dict[str, Any] = {}):
+            if not pattern and not expr:
+                if bindings:
+                    return ("binding", bindings)
+                return ("success",)
+            elif not pattern or not expr:
+                return None
+            if len(pattern) == 2:
+                match (pattern[0], pattern[1]):
+                    case ((TokenType.WORD, _), (TokenType.WORD, "...")):
+                        if pattern[0][1] in bindings:
+                            raise SyntaxError(
+                                f"Duplicate binding: {pattern[0][1]}")
+                        bindings[(pattern[0], pattern[1])] = expr  # 特殊处理，列表形式
+                        return ('binding', bindings)
 
-        if isinstance(pattern, List) and len(pattern) == len(expr):
-            bindings = {}
-            for p, e in zip(pattern, expr):
-                result = match_pattern(p, e)
-                if result is None:
-                    return None
-                if isinstance(result, Tuple) and result[0] == "fail":
-                    return None
-                if isinstance(result, Tuple) and result[0] == "binding":
-                    var, val = result[1], result[2]
-                    if var in bindings and bindings[var] != val:
-                        return None
-                    bindings[var] = val
-            return ("binding", bindings)
-
-        if isinstance(pattern, Tuple):
-            return ("binding", pattern[1], expr)
-
-        if pattern == expr:
-            return ("success",)
-
-        return None
-
-    def apply_template(template: List | Tuple, bindings: Dict[str, Any]):
-        if isinstance(template, Tuple):
-            if template[0] == TokenType.WORD:
-                if template[1] in bindings:
-                    return bindings[template[1]]
-                else:
-                    return template
+            if pattern[0][0] == TokenType.WORD and pattern[0][1] == "_":
+                return match_pattern_r(pattern[1:], expr[1:], bindings)
+            elif pattern[0] == expr[0]:
+                # literals
+                return match_pattern_r(pattern[1:], expr[1:], bindings)
+            elif pattern[0][0] == TokenType.WORD:
+                if pattern[0][1] in bindings:
+                    raise SyntaxError(
+                        f"Duplicate binding: {pattern[0][1]}")
+                bindings[pattern[0][1]] = expr[0]
+                return match_pattern_r(pattern[1:], expr[1:], bindings)
             else:
-                return template
-        return [apply_template(t, bindings) for t in template]
+                return None
+        return match_pattern_r(pattern, expr, {})
+
+    def apply_template(template: List, bindings: Dict[str, Any]) -> List[Any]:
+        def apply_template_r(temp: List):
+            if not temp:
+                return []
+            if isinstance(temp[0], List):
+                return [apply_template_r(t) for t in temp]
+            if temp[0][0] == TokenType.WORD:
+                if temp[0][1] in bindings:
+                    return [bindings[temp[0][1]]] + apply_template_r(temp[1:])
+                if (temp[0], temp[1]) in bindings:
+                    return bindings[(temp[0], temp[1])]  # 无需列表包裹
+                else:
+                    return [temp[0]] + apply_template_r(temp[1:])
+            else:
+                return [temp[0]] + apply_template_r(temp[1:])
+        return apply_template_r(template)
 
     def transformer(expr, env):
         for pattern, template in zip(patterns, templates):
