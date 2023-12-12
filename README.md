@@ -25,13 +25,14 @@ pip install git+https://github.com/dbian/pyscheme.git
 
 
 ```python
-import pyscheme.scheme as sc
-env = sc.new_env()
-assert sc.run("(define bb (lambda (aa) (+ aa 2))) (bb 5)", env) == 7
+import pyscheme
+env = pyscheme.new_env()
+assert pyscheme.run("(define bb (lambda (aa) (+ aa 2))) (bb 5)", env) == 7
 
 def str_format_func(f, *args):
     return f % args
-sc.put("format", str_format_func)
+pyscheme.put("format", str_format_func)
+pyscheme.put("variable", 123)
 
 ```
 
