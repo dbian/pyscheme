@@ -1,16 +1,12 @@
 Minimal r7rs scheme python library with a repl. Made by gpt, maintained by human.
 
-# Warning
-
-Under heavy development, use it at your own risk.
-
 # Install
 
 ```shell
 pip install pyscheme
 ```
 
-## You may try latest features by using git to install
+## Using git to install latest version
 
 ```shell
 pip install git+https://github.com/dbian/pyscheme.git
@@ -18,12 +14,12 @@ pip install git+https://github.com/dbian/pyscheme.git
 
 # Implemented Features
 
-- lexical scope `let`,`let*`
-- `begin`, `if`, `lambda`, `define`... etc.
+- Lexical scope `let`,`let*`. `begin`, `if`, `lambda`, `define`... etc.
+- Full featured Macro system, which means you can use `_` and `...` in pattern matching rules.
 - REPL, with clojure like `*1` `*2` `*3` result cache support
-- put to extend scheme language, you can use it to install global variables too.
-- single line comment, start with `;`
-- more
+- Use `put` to extend scheme language easily with power python ecosystem.
+- Single line comment, start with `;`
+- More to discover...
 
 # Usage
 
@@ -39,9 +35,10 @@ sc.put("format", str_format_func)
 
 ```
 
-# Todo
+# Future plans
 
-- macros system
-- quote `'` support
+- [ ] easy template interpolation support aka.: "`", "," and ",@"
+- [ ] macros system add hygienic variable support
+- [ ] more standard functions
 - module system
 - more
