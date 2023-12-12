@@ -1,9 +1,11 @@
+import os
 import operator
 import math
 from pyscheme.parser import parse
 from pyscheme.tokenizer import *
 from typing import Any, Dict, Generator, List, Tuple
 from . import tokenizer
+import functools
 
 
 def define_syntax(expr, env):
@@ -133,7 +135,14 @@ def eval_sexpression(expr: List | Token, env: Dict):
                 return env[val]
             case _:
                 raise SyntaxError(f"Invalid syntax: {expr}")
+    # process pair
+    match expr:
+        case [va, (TokenType.CONS, _), vb]:
+            return eval_sexpression([(TokenType.WORD, "cons"), eval_sexpression(va, env), eval_sexpression(vb, env)], env)
+
     match [expr[0][1], *expr[1:]]:
+        case ["cons", va, vb]:
+            return [eval_sexpression(va, env), eval_sexpression(vb, env)]
         case ["cond", *clauses]:
             for clause in clauses:
                 if eval_sexpression(clause[0], env):
@@ -145,6 +154,8 @@ def eval_sexpression(expr: List | Token, env: Dict):
             return lst[k:]
         case ["quote", exp]:
             return exp
+        # case ["unquote", exp]:
+        #     return eval_sexpression(exp, env)
         case ["if", test, conseq]:
             if eval_sexpression(test, env):
                 return eval_sexpression(conseq, env)
@@ -232,6 +243,11 @@ def run_file(filename, env):
     with open(filename, "r", encoding="utf-8") as file:
         code = file.read()
         return run(code, env)
+
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+std_file_path = os.path.join(current_dir, 'std.scm')
+run_file(std_file_path, global_env)
 
 
 def run_file_yield(filename, env) -> Generator:

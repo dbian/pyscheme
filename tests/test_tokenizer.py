@@ -55,6 +55,13 @@ class TestT(unittest.TestCase):
         self.assertEqual(tk[1], (tokenizer.TokenType.QUOTE, "'"))
         self.assertEqual(tk[2], (tokenizer.TokenType.WORD, "a"))
 
+    def test_cons(self):
+        scheme_code = "a . b"
+        tk = tokenizer.tokenize(scheme_code)
+        self.assertEqual(tk[0], (tokenizer.TokenType.WORD, "a"))
+        self.assertEqual(tk[1], (tokenizer.TokenType.CONS, " . "))
+        self.assertEqual(tk[2], (tokenizer.TokenType.WORD, "b"))
+
 
 if __name__ == '__main__':
     unittest.main()

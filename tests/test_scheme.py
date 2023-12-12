@@ -3,6 +3,8 @@ from typing import Dict
 import pyscheme
 import unittest
 
+from pyscheme.tokenizer import TokenType
+
 
 class TestEval(unittest.TestCase):
     def test_t(self):
@@ -57,6 +59,15 @@ class TestEval(unittest.TestCase):
             pyscheme.run("(define (bb aa) (+ aa 2)) (bb 2)", env), 4
         )
 
+    @unittest.SkipTest
+    def test_pair(self):
+        env = pyscheme.new_env()
+        self.assertEqual(pyscheme.run("'(1 . ())", env),
+                         [(TokenType.QUOTE, "quote"), (TokenType.NUMBER, 1)])
+        self.assertEqual(pyscheme.run("'(1 . (2 . ()))", env), [(TokenType.QUOTE, "quote"),
+                         (TokenType.NUMBER, 1), (TokenType.NUMBER, 2)])
+        # self.assertEqual(pyscheme.run("''a", env), [(TokenType.WORD, "quote"), (TokenType.WORD, "a")])
+
 
 def yd(x):
     yield x
@@ -87,6 +98,20 @@ class TestYield(unittest.TestCase):
         self.assertEqual(next(f), None)
         self.assertEqual(next(f), 4)
         self.assertEqual(next(f), 2)
+
+
+class TestQuote(unittest.TestCase):
+    @unittest.SkipTest
+    def test_quote(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("(quote (1 2 3))", env)
+        self.assertEqual(res, [1, 2, 3])
+
+    @unittest.SkipTest
+    def test_unquote(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("`(123)", env)
+        self.assertEqual(res, [123])
 
 
 if __name__ == '__main__':
