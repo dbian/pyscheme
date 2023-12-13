@@ -101,17 +101,51 @@ class TestYield(unittest.TestCase):
 
 
 class TestQuote(unittest.TestCase):
-    @unittest.SkipTest
     def test_quote(self):
         env = pyscheme.new_env()
         res = pyscheme.run("(quote (1 2 3))", env)
-        self.assertEqual(res, [1, 2, 3])
+        self.assertEqual(res, [('NUMBER', 1), ('NUMBER', 2), ('NUMBER', 3)])
 
-    @unittest.SkipTest
     def test_unquote(self):
         env = pyscheme.new_env()
         res = pyscheme.run("`(123)", env)
-        self.assertEqual(res, [123])
+        self.assertEqual(res, [('NUMBER', 123)])
+
+    def test_unquote2(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("""
+(define w 21)
+(define x 22)
+(define y 23)
+(define z 24)
+`(,w (,x (,y ,z) 8))
+""", env)
+        self.assertEqual(
+            res, [('NUMBER', 21), [('NUMBER', 22), [('NUMBER', 23), ('NUMBER', 24)], ('NUMBER', 8)]])
+
+    def test_unquote3(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("""
+(define w 21)
+(define x '(22 23))
+(define y 23)
+(define z '())
+`(,w (,@x (,y ,@z) 8))
+""", env)
+        self.assertEqual(
+            res, [('NUMBER', 21), [('NUMBER', 22), ('NUMBER', 23), [('NUMBER', 23)], ('NUMBER', 8)]])
+
+    def test_unquote4(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("""
+(define w 21)
+(define x 22)
+(define y 23)
+(define z 24)
+(map (lambda (v) (+ v 10)) (map (lambda (v) (+ v 10))`(,w ,x ,y ,z 8)))
+""", env)
+        self.assertEqual(
+            res, [('NUMBER', 41), [('NUMBER', 42), ('NUMBER', 43), [('NUMBER', 43)], ('NUMBER', 28)]])
 
 
 if __name__ == '__main__':

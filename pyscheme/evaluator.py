@@ -83,7 +83,7 @@ def syntax_rules(literals, pattern: List[Token]):
                 else:
                     raise SyntaxError("Invalid pattern template")
         raise SyntaxError(
-            "No matching pattern found for expression: " + str(expr) + " in " + str(patterns))
+            "No matching pattern found for expression: \n" + str(expr) + "\n in:\n\n" + functools.reduce(lambda x, y: x + "\n" + y, map(str, patterns)))
 
     return transformer
 
@@ -121,6 +121,56 @@ def get_list_val(lst):
 # 定义解释器的函数
 
 
+class FakeList():
+    def __init__(self, eles):
+        self.eles = eles
+
+
+def quasiquote(expr, env):
+    def add_type(ep):
+        match ep:
+            case list():
+                return [add_type(x) for x in ep]
+            case str():
+                return (TokenType.STRING, ep)
+            case int() | float():
+                return (TokenType.NUMBER, ep)
+            case (_, _):
+                return ep
+            case _:
+                raise SyntaxError(f"Invalid syntax: {ep}")
+
+    def eval_sexp_keep_type(ep):
+        res = eval_sexpression(ep, env)
+        match res:
+            case list():
+                return [add_type(x) for x in res]
+            case _:
+                return add_type(res)
+
+    def handle_ele(ep):
+        def reducer(acc, x):
+            res = handle_ele(x)
+            if isinstance(res, FakeList):
+                return acc + res.eles
+            else:
+                acc.append(res)
+                return acc
+        match ep:
+            case [(TokenType.WORD, "unquote"), x]:
+                return eval_sexp_keep_type(x)
+            case [(TokenType.WORD, "unquote-splicing"), x]:
+                return FakeList(eval_sexp_keep_type(x))
+            case list():
+                return functools.reduce(reducer, ep, [])
+            case (kind, val):
+                return ep
+            case _:
+                return ep
+
+    return handle_ele(expr)
+
+
 def eval_sexpression(expr: List | Token, env: Dict):
     # expr = macro_expand(expr, env)  # Macro expansion
     if isinstance(expr, Tuple):
@@ -138,7 +188,7 @@ def eval_sexpression(expr: List | Token, env: Dict):
     # process pair
     match expr:
         case [va, (TokenType.CONS, _), vb]:
-            return eval_sexpression([(TokenType.WORD, "cons"), eval_sexpression(va, env), eval_sexpression(vb, env)], env)
+            return [va, vb]
 
     match [expr[0][1], *expr[1:]]:
         case ["cons", va, vb]:
@@ -154,8 +204,8 @@ def eval_sexpression(expr: List | Token, env: Dict):
             return lst[k:]
         case ["quote", exp]:
             return exp
-        # case ["unquote", exp]:
-        #     return eval_sexpression(exp, env)
+        case ["quasiquote", exp]:
+            return quasiquote(exp, env)
         case ["if", test, conseq]:
             if eval_sexpression(test, env):
                 return eval_sexpression(conseq, env)
