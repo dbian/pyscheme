@@ -118,6 +118,9 @@ global_env = {
 def unbox_list(lst):
     return [x[1] for x in lst]
 
+
+def unbox_list_rec(lst):
+    return [unbox_list_rec(x) if isinstance(x, list) else x[1] for x in lst]
 # 定义解释器的函数
 
 
@@ -205,7 +208,7 @@ def eval_sexpression(expr: List | Token, env: Dict):
             return lst[k:]
         case ["quote", exp]:
             if isinstance(exp, list):
-                return unbox_list(exp)
+                return unbox_list_rec(exp)
             return exp[1]
         case ["quasiquote", exp]:
             return quasiquote(exp, env)

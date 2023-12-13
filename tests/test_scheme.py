@@ -112,6 +112,16 @@ class TestQuote(unittest.TestCase):
         res = pyscheme.run("'a", env)
         self.assertEqual(res, "a")
 
+    def test_quoteq(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("''a", env)
+        self.assertEqual(res, ['quote', 'a'])
+
+    def test_quoteql(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("'(a ('b) c)", env)
+        self.assertEqual(res, ['a', [['quote', 'b']], 'c'])
+
     def test_unquote(self):
         env = pyscheme.new_env()
         res = pyscheme.run("`(123)", env)
