@@ -115,7 +115,7 @@ global_env = {
 }
 
 
-def get_list_val(lst):
+def unbox_list(lst):
     return [x[1] for x in lst]
 
 # 定义解释器的函数
@@ -142,6 +142,7 @@ def quasiquote(expr, env):
 
     def eval_sexp_keep_type(ep):
         res = eval_sexpression(ep, env)
+        return res
         match res:
             case list():
                 return [add_type(x) for x in res]
@@ -164,9 +165,9 @@ def quasiquote(expr, env):
             case list():
                 return functools.reduce(reducer, ep, [])
             case (kind, val):
-                return ep
+                return ep[1]
             case _:
-                return ep
+                return ep[1]
 
     return handle_ele(expr)
 
@@ -203,7 +204,9 @@ def eval_sexpression(expr: List | Token, env: Dict):
             k = eval_sexpression(k, env)
             return lst[k:]
         case ["quote", exp]:
-            return exp
+            if isinstance(exp, list):
+                return unbox_list(exp)
+            return exp[1]
         case ["quasiquote", exp]:
             return quasiquote(exp, env)
         case ["if", test, conseq]:
@@ -215,11 +218,11 @@ def eval_sexpression(expr: List | Token, env: Dict):
             return eval_sexpression(exp, env)
         case ["define", [(TokenType.WORD, func_name), *params], body]:
             env[func_name] = lambda *args: eval_sexpression(
-                body, env | dict(zip(get_list_val(params), args)))
+                body, env | dict(zip(unbox_list(params), args)))
         case ["define", symbol, exp]:
             env[symbol[1]] = eval_sexpression(exp, env)
         case ["lambda", params, body]:
-            return lambda *args: eval_sexpression(body, env | dict(zip(get_list_val(params), args)))
+            return lambda *args: eval_sexpression(body, env | dict(zip(unbox_list(params), args)))
         case ["begin", *exps]:
             result = None
             for exp in exps:

@@ -10,6 +10,7 @@ class TestEval(unittest.TestCase):
     def test_t(self):
         env = pyscheme.new_env()
         self.assertEqual(pyscheme.run("(+ 1 34)", env), 35)
+        self.assertEqual(pyscheme.run("(+ 1 (+ 1 34))", env), 36)
         self.assertEqual(pyscheme.run("(define aa 2) (+ aa 2)", env), 4)
         self.assertEqual(
             pyscheme.run("(define bb (lambda (aa) (+ aa 2))) (bb 2)", env), 4
@@ -104,12 +105,17 @@ class TestQuote(unittest.TestCase):
     def test_quote(self):
         env = pyscheme.new_env()
         res = pyscheme.run("(quote (1 2 3))", env)
-        self.assertEqual(res, [('NUMBER', 1), ('NUMBER', 2), ('NUMBER', 3)])
+        self.assertEqual(res, [1, 2, 3])
+
+    def test_quotea(self):
+        env = pyscheme.new_env()
+        res = pyscheme.run("'a", env)
+        self.assertEqual(res, "a")
 
     def test_unquote(self):
         env = pyscheme.new_env()
         res = pyscheme.run("`(123)", env)
-        self.assertEqual(res, [('NUMBER', 123)])
+        self.assertEqual(res, [123])
 
     def test_unquote2(self):
         env = pyscheme.new_env()
@@ -121,7 +127,7 @@ class TestQuote(unittest.TestCase):
 `(,w (,x (,y ,z) 8))
 """, env)
         self.assertEqual(
-            res, [('NUMBER', 21), [('NUMBER', 22), [('NUMBER', 23), ('NUMBER', 24)], ('NUMBER', 8)]])
+            res, [21, [22, [23, 24], 8]])
 
     def test_unquote3(self):
         env = pyscheme.new_env()
@@ -133,7 +139,7 @@ class TestQuote(unittest.TestCase):
 `(,w (,@x (,y ,@z) 8))
 """, env)
         self.assertEqual(
-            res, [('NUMBER', 21), [('NUMBER', 22), ('NUMBER', 23), [('NUMBER', 23)], ('NUMBER', 8)]])
+            res, [21, [22, 23, [23], 8]])
 
     def test_unquote4(self):
         env = pyscheme.new_env()
@@ -145,7 +151,7 @@ class TestQuote(unittest.TestCase):
 (map (lambda (v) (+ v 10)) (map (lambda (v) (+ v 10))`(,w ,x ,y ,z 8)))
 """, env)
         self.assertEqual(
-            res, [('NUMBER', 41), [('NUMBER', 42), ('NUMBER', 43), [('NUMBER', 43)], ('NUMBER', 28)]])
+            res, [41, 42, 43, 44, 28])
 
 
 if __name__ == '__main__':
