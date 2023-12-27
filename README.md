@@ -16,9 +16,10 @@ pip install git+https://github.com/dbian/pyscheme.git
 
 - Lexical scope `let`,`let*`. `begin`, `if`, `lambda`, `define`... etc.
 - Full featured Macro system, which means you can use `_` and `...` in pattern matching rules.
-- REPL, with clojure like `*1` `*2` `*3` result cache support
+- [x] easy template interpolation support aka.: "`", "," and ",@"
 - Use `put` to extend scheme language easily with power python ecosystem.
 - Single line comment, start with `;`
+- REPL, with clojure like `*1` `*2` `*3` result cache support
 - More to discover...
 
 # Usage
@@ -38,8 +39,8 @@ pyscheme.put("variable", 123)
 
 # Future plans
 
-- [ ] easy template interpolation support aka.: "`", "," and ",@"
 - [ ] macros system add hygienic variable support
 - [ ] more standard functions
+- [ ] call/cc
 - module system
 - more

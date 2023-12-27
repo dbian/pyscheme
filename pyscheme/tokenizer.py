@@ -15,6 +15,7 @@ class TokenType:
     QQUOTE = "QQUOTE"
     COMMA = "COMMA"
     COMMA_AT = "COMMA_AT"
+    CONS = "CONS"
 
 
 def tokenize(scheme_code: str) -> List[Token]:
@@ -30,6 +31,7 @@ def tokenize(scheme_code: str) -> List[Token]:
         (r"`", TokenType.QQUOTE),
         (r",@", TokenType.COMMA_AT),
         (r",", TokenType.COMMA),
+        (r"\s\.\s", TokenType.CONS),
         (r'[^\s\(\)"\';]+', TokenType.WORD),  # 匹配单词
     ]
 

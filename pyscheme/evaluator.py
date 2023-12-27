@@ -1,9 +1,11 @@
+import os
 import operator
 import math
 from pyscheme.parser import parse
 from pyscheme.tokenizer import *
 from typing import Any, Dict, Generator, List, Tuple
 from . import tokenizer
+import functools
 
 
 def define_syntax(expr, env):
@@ -81,7 +83,7 @@ def syntax_rules(literals, pattern: List[Token]):
                 else:
                     raise SyntaxError("Invalid pattern template")
         raise SyntaxError(
-            "No matching pattern found for expression: " + str(expr) + " in " + str(patterns))
+            "No matching pattern found for expression: \n" + str(expr) + "\n in:\n\n" + functools.reduce(lambda x, y: x + "\n" + y, map(str, patterns)))
 
     return transformer
 
@@ -113,10 +115,64 @@ global_env = {
 }
 
 
-def get_list_val(lst):
+def unbox_list(lst):
     return [x[1] for x in lst]
 
+
+def unbox_list_rec(lst):
+    return [unbox_list_rec(x) if isinstance(x, list) else x[1] for x in lst]
 # 定义解释器的函数
+
+
+class FakeList():
+    def __init__(self, eles):
+        self.eles = eles
+
+
+def quasiquote(expr, env):
+    def add_type(ep):
+        match ep:
+            case list():
+                return [add_type(x) for x in ep]
+            case str():
+                return (TokenType.STRING, ep)
+            case int() | float():
+                return (TokenType.NUMBER, ep)
+            case (_, _):
+                return ep
+            case _:
+                raise SyntaxError(f"Invalid syntax: {ep}")
+
+    def eval_sexp_keep_type(ep):
+        res = eval_sexpression(ep, env)
+        return res
+        match res:
+            case list():
+                return [add_type(x) for x in res]
+            case _:
+                return add_type(res)
+
+    def handle_ele(ep):
+        def reducer(acc, x):
+            res = handle_ele(x)
+            if isinstance(res, FakeList):
+                return acc + res.eles
+            else:
+                acc.append(res)
+                return acc
+        match ep:
+            case [(TokenType.WORD, "unquote"), x]:
+                return eval_sexp_keep_type(x)
+            case [(TokenType.WORD, "unquote-splicing"), x]:
+                return FakeList(eval_sexp_keep_type(x))
+            case list():
+                return functools.reduce(reducer, ep, [])
+            case (kind, val):
+                return ep[1]
+            case _:
+                return ep[1]
+
+    return handle_ele(expr)
 
 
 def eval_sexpression(expr: List | Token, env: Dict):
@@ -133,7 +189,14 @@ def eval_sexpression(expr: List | Token, env: Dict):
                 return env[val]
             case _:
                 raise SyntaxError(f"Invalid syntax: {expr}")
+    # process pair
+    match expr:
+        case [va, (TokenType.CONS, _), vb]:
+            return [va, vb]
+
     match [expr[0][1], *expr[1:]]:
+        case ["cons", va, vb]:
+            return [eval_sexpression(va, env), eval_sexpression(vb, env)]
         case ["cond", *clauses]:
             for clause in clauses:
                 if eval_sexpression(clause[0], env):
@@ -144,7 +207,11 @@ def eval_sexpression(expr: List | Token, env: Dict):
             k = eval_sexpression(k, env)
             return lst[k:]
         case ["quote", exp]:
-            return exp
+            if isinstance(exp, list):
+                return unbox_list_rec(exp)
+            return exp[1]
+        case ["quasiquote", exp]:
+            return quasiquote(exp, env)
         case ["if", test, conseq]:
             if eval_sexpression(test, env):
                 return eval_sexpression(conseq, env)
@@ -154,11 +221,11 @@ def eval_sexpression(expr: List | Token, env: Dict):
             return eval_sexpression(exp, env)
         case ["define", [(TokenType.WORD, func_name), *params], body]:
             env[func_name] = lambda *args: eval_sexpression(
-                body, env | dict(zip(get_list_val(params), args)))
+                body, env | dict(zip(unbox_list(params), args)))
         case ["define", symbol, exp]:
             env[symbol[1]] = eval_sexpression(exp, env)
         case ["lambda", params, body]:
-            return lambda *args: eval_sexpression(body, env | dict(zip(get_list_val(params), args)))
+            return lambda *args: eval_sexpression(body, env | dict(zip(unbox_list(params), args)))
         case ["begin", *exps]:
             result = None
             for exp in exps:
@@ -232,6 +299,11 @@ def run_file(filename, env):
     with open(filename, "r", encoding="utf-8") as file:
         code = file.read()
         return run(code, env)
+
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+std_file_path = os.path.join(current_dir, 'std.scm')
+run_file(std_file_path, global_env)
 
 
 def run_file_yield(filename, env) -> Generator:

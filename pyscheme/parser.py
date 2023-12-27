@@ -19,8 +19,10 @@ def parse(tokens: List) -> List[Any] | Token:
             return expr
         case ")":
             raise SyntaxError("Unexpected )")
-        case "'" | "`":
+        case "'":
             return [(TokenType.WORD, "quote"), parse(tokens)]
+        case "`":
+            return [(TokenType.WORD, "quasiquote"), parse(tokens)]
         case ",":
             return [(TokenType.WORD, "unquote"), parse(tokens)]
         case ",@":
